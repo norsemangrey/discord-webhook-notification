@@ -61,6 +61,11 @@ discordUsername=${DISCORD_USER}
 discordAvatarURL=${DISCORD_AVATAR_URL}
 discordRoleID=${DISCORD_ROLE_ID}
 
+#### REPLACE ROLES ####
+
+discordMessageEmbeds=$(echo "${discordMessageEmbeds}" | sed 's/\@admin/<\@\&'${discordRoleID}'>/g')
+
+
 #### DISCORD NOTIFICATION ####
 
 # Complete the Discord JSON string.

@@ -7,10 +7,11 @@ This script allows you to send notifications to a Discord channel using a webhoo
 - [Overview](#overview)
 - [Usage](#usage)
 - [Requirements](#requirements)
+- [Instructions](#instructions)
 - [Script Details](#script-details)
   - [Discord Variables](#discord-variables)
   - [Discord Notification](#discord-notification)
-- [Secret Variables](#secret-variables)
+- [Example Usage](#example-usage)
 
 ## Overview
 
@@ -36,6 +37,16 @@ Before using this script, make sure you have the following requirements:
 
 - Curl (for making HTTP requests)
 - Discord Channel
+
+## Instructions
+
+Copy the files to a location on your machine and use it from any other script or code you might have.
+
+You can get the **ID** (numbers) and **token** (alphanumerical) and by going into the settings for the Discord channel you want the notifications to be sent to and create a new webhook under *Integration -> Webhooks*. Create a webhook and click the *'Copy Webhook URL'*.
+
+The **user** is just a string with any username you want to appear on the notification. The **avatar URL** and the message icon are URLs to the image files you want to use in the notification. I use [imgur](https://imgur.com) to host the image files I am using.
+
+The **role id** is the Discord ID for a role you create on your Discord channel which you want to get pinged when any issues are detected. You can get the role ID by typing `\@rolename` in a channel on your Discord server.
 
 ## Script Details
 
