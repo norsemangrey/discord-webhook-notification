@@ -63,7 +63,8 @@ discordRoleID=${DISCORD_ROLE_ID}
 
 #### REPLACE ROLES ####
 
-discordMessageEmbeds=$(echo "${discordMessageEmbeds}" | sed 's/\@admin/<\@\&'${discordRoleID}'>/g')
+# Replace @admin mention with correct ID.
+discordMessageEmbeds=$(echo "${discordMessageEmbeds}" | sed 's/\@admin/\<\@\&'${discordRoleID}'/g')
 
 
 #### DISCORD NOTIFICATION ####
