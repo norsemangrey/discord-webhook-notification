@@ -1,6 +1,6 @@
 # Discord Notification Script
 
-This script allows you to send notifications to a Discord channel using a webhook. You can customize the content and embeds of the Discord message. Additionally, you can attach a file to the message if needed. It a useful tool for alerting users or administrators about important events or changes in your environment.
+This script allows you to send notifications to a Discord channel using a webhook. You can customize the content and embeds of the Discord message. Additionally, you can attach a file to the message if needed. Combined with other scripts and automations on your system a useful tool for alerting users or administrators about important events or changes in your environment.
 
 ## Table of Contents
 
