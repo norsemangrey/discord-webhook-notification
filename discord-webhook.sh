@@ -5,11 +5,18 @@ scriptPath=$(echo "${0%/*}")
 
 # Usage function.
 usage() {
+    echo ""
     echo "Usage: $0 [OPTIONS]"
+    echo ""
     echo "Options:"
     echo "  -c, --content <content>   Set the content of the Discord message."
     echo "  -e, --embeds <embeds>     Set the embeds of the Discord message."
     echo "  -h, --help                Show this help message and exit."
+    echo ""
+    echo "Refer to the Discord documentation for more information on Webhooks"
+    echo ""
+    echo "  https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
+    echo ""
 }
 
 #### DISCORD VARIABLES ####
