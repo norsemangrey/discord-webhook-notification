@@ -1,105 +1,132 @@
 #!/bin/bash
 
-# Your JSON file path
-json_file="./tmp2.json"
+jsonContent=$1
 
-# Specify the field names you want to check
-fields_to_check=("description" "value")
-field_name="description"
-
-lengthLimits=(
-    'Content .content 2000'
-    'Title .embeds[].title 256'
-    'Description .embeds[].description 4096'
-    'Author .embeds[].author.name 256'
-    'Name .embeds[].fields[].name 256'
-    'Value .embeds[].fields[].value 1024'
-    'Footer .footer.text 2048'
+# Character lenght limits & object count limits
+limits=(
+    'Content        .content                    2000    char    1'
+    'Embeds         .embeds                     10      obj     0'
+    'Author         .embeds[].author.name       256     char    1'
+    'Title          .embeds[].title             256     char    1'
+    'Description    .embeds[].description       1024    char    1'
+    'Fields         .embeds[].fields            25      obj     1'
+    'Name           .embeds[].fields[].name     256     char    1'
+    'Value          .embeds[].fields[].value    1024    char    1'
+    'Footer         .footer.text                2048    char    1'
+    'Totals         na                          6000    char    1'
+    'Total          na                          6000    char    0'
 )
 
-countLimits=(
-    'Embeds .embeds 10'
-    'Fields .embeds[].fields 25'
-)
+headings="name field value type critical count"
 
-results=()
+criticalResult=false
+outsideLimits=false
 
-IFS=' ' read -r name field limit <<< "${countLimits[0]}"
+totalCharactersAllEmbeds=0
 
-embedsCount=$(jq "$field | length" ${json_file})
 
-#[ $embedsCount -gt $limit ] && ( check=0 ) || ( check=1 )
-check=$((embedsCount > limit ? 0 : 1))
+function updateResults() {
 
-results+=("${name} ${check}")
+    echo "${name}: ${count}"
 
-echo "Embeds: ${embedsCount}"
+    if [[ ${count} -gt ${value} ]]; then
 
-IFS=' ' read -r name field limit <<< "${countLimits[1]}"
+        outsideLimits=true
 
-fieldCount=0
-check=1
+        if [ "${critical}" == "1" ]; then
 
-# The field limit is pr. embed
-for (( index=1; index<=$embedsCount; index++ )); do
+            criticalResult=true
 
-    fieldCount=$(jq --argjson index "$index" '.embeds[$index].fields | length' ${json_file})
+        fi
 
-    if [[ ${fieldCount} -gt ${limit} ]]; then
-
-        check=0
+        results+="${name} ${field} ${value} ${type} ${critical} ${count}\n"
 
     fi
 
-done
+}
 
 
+for limit in "${limits[@]}"; do
 
-results+=("${name} ${check}")
+    IFS=' ' read -r $headings <<< "$limit"
 
-echo Fields: ${fieldCount}
+    # Check if limit is a 'character' limit
+    if [[ "${field}" == *".embeds[]"* ]]; then
 
+        for (( i=0; i<$embedsCount; i++ )); do
 
-for fieldLimit in "${lengthLimits[@]}"; do
+            embed=$(jq -r ".embeds[$i]" <<< "${jsonContent}")
 
-    IFS=' ' read -r name field limit <<< "$fieldLimit"
+            element="${field//'.embeds[]'/}"
 
-    echo "${name}:"
+            # Check if object is a field object as this is an array
+            if [[ "${field}" == *".fields[]"* ]]; then
 
-    check=1
+                # Remove parent object from element name
+                element="${element//'.fields[]'/}"
 
-    while IFS=$'\t' read -r characters; do
+                # Get the character count sum for each child element of the field object
+                count=$(jq ".fields | map($element | length) | add" <<< "${embed}")
 
-        if [[ ${characters} -gt ${limit} ]]; then
+            else
 
-            echo -e "\033[33m${characters}\033[0m"
-            check=0
+                count=$(jq "$element | length" <<< "${embed}")
 
-        else
+            fi
 
-            echo "$characters"
+            [ "${type}" == "char" ] && ((embedTotals[$i]+=count))
+
+            updateResults
+
+        done
+
+    elif [[ "${name}" == "Totals" ]]; then
+
+        for count in "${embedTotals[@]}"; do
+
+            updateResults
+
+            ((totalCharactersAllEmbeds+=count))
+
+        done
+
+    elif [[ "${name}" == "Total" ]]; then
+
+        count=${totalCharactersAllEmbeds}
+
+        updateResults
+
+    else
+
+        count=$(jq "$field | length" <<< "${jsonContent}")
+
+        if [[ "${name}" == "Embeds" ]]; then
+
+            embedsCount=${count}
+
+            for (( i=0; i<$embedsCount; i++ )); do
+
+                embedTotals[$i]=0
+
+            done
 
         fi
 
-        if [[ "${name}" != "Content" ]]; then
+        updateResults
 
-            total=$((total + characters))
-        fi
+    fi
 
-    done < <(jq -r "$field | length" ${json_file})
-
-    results+=("${name} ${check}")
 
 done
 
-echo Total Characters: ${total}
+results="${results%??}"
 
-check=$((total > 6000 ? 0 : 1))
+echo -e "${results}"
 
-results+=("Total ${check}")
-
-for element in "${results[@]}"; do
-
-    echo "$element"
-
-done
+if ${criticalResult}; then
+    exit 2
+elif ${outsideLimits}; then
+    exit 1
+else
+    exit 0
+fi
