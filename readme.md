@@ -29,6 +29,7 @@ Options:
   -c, --content <content>   Set the content of the Discord message.
   -e, --embeds <embeds>     Set the embeds of the Discord message.
   -f, --file <file-path>    Attach a file to the Discord message.
+  -d, --debug               Enableds debug console output.
   -h, --help                Show this help message and exit.
 ```
 
