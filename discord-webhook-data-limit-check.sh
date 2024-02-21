@@ -33,7 +33,7 @@ usage() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -m|--message)
-            jsonContent="$2"
+            jsonMessage="$2"
             shift 2
             ;;
         -d|--debug)
@@ -47,16 +47,16 @@ while [[ $# -gt 0 ]]; do
         *)
             echo "Invalid option: $1" >&2
             usage
-            exit 1
+            exit 2
             ;;
     esac
 done
 
 # Check if JSON is provided and not empty
-if [ -z "$jsonContent" ]; then
+if [ -z "${jsonMessage}" ]; then
     echo "Error: The --message option is mandatory." >&2
     usage
-    exit 1
+    exit 2
 fi
 
 #### INITIALIZATION & PARAMETERS ####
@@ -91,6 +91,7 @@ totalCharactersAllEmbeds=0
 # Check count against limit and update results
 function updateResults() {
 
+    # Output info if debug enabled
     [ ${debug} ] && echo "${name}: ${count}"
 
     # Compare count with limit value
@@ -129,7 +130,7 @@ for limit in "${limits[@]}"; do
         for (( i=0; i<$embedsCount; i++ )); do
 
             # Get current embed section content
-            embed=$(jq -r ".embeds[$i]" <<< "${jsonContent}")
+            embed=$(jq -r ".embeds[$i]" <<< "${jsonMessage}")
 
             # Remove section name parent for correct parsing
             element="${section//'.embeds[]'/}"
@@ -183,7 +184,7 @@ for limit in "${limits[@]}"; do
     else
 
         # Get the count (characters or array length)
-        count=$(jq "$section | length" <<< "${jsonContent}")
+        count=$(jq "$section | length" <<< "${jsonMessage}")
 
         # Check if the limit is for the embeds section
         if [[ "${name}" == "Embeds" ]]; then

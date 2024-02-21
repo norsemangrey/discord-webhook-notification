@@ -20,6 +20,7 @@ usage() {
     echo "  -c, --content <content>   Set the content of the Discord message."
     echo "  -e, --embeds <embeds>     Set the embeds of the Discord message."
     echo "  -f, --file <file-path>    Set the file attachment path (optional)."
+    echo "  -d, --debug               Turns on console output"
     echo "  -h, --help                Show this help message and exit."
     echo ""
     echo "Refer to the Discord documentation for more information on Webhooks"
@@ -43,14 +44,23 @@ sendWebhook() {
     if [ -z "${discordAttachmentPath}" ] || [ "${includeAttachment}" = "false" ]; then
 
         # Send message without attachment
-        curl -H "Content-Type: application/json" -d "$discordJsonData" ${discordWebhookBase}"/"${discordID}"/"${discordToken}
+        reponse=$(curl -s -H "Content-Type: application/json" -d "$discordJsonData" ${discordWebhookBase}"/"${discordID}"/"${discordToken})
 
     else
 
         # Send message with attachment
-        curl -F payload_json="${discordJsonData}" -F "file1=@${discordAttachmentPath}" ${discordWebhookBase}"/"${discordID}"/"${discordToken}
+        response=$(curl -s -F payload_json="${discordJsonData}" -F "file1=@${discordAttachmentPath}" ${discordWebhookBase}"/"${discordID}"/"${discordToken})
 
     fi
+
+    # Check if curl was successful
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to send webhook message." >&2
+        exit 1
+    fi
+
+    # Output curl reposnse if debug enabled
+    [ ${debug} ] && echo "${response}"
 
 }
 
@@ -71,6 +81,10 @@ while [[ $# -gt 0 ]]; do
             discordAttachmentPath="$2"
             shift 2
             ;;
+        -d|--debug)
+            debug=true
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -82,6 +96,13 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Check if JSON is provided and not empty
+if [ -z "${discordMessageContent}" ] && [ -z "${discordMessageEmbeds}" ]; then
+    echo "Error: Either a message 'content' or message 'embed' is required." >&2
+    usage
+    exit 1
+fi
 
 #### DISCORD VARIABLES ####
 
@@ -117,15 +138,16 @@ discordJson='{ "username":"'"${discordUsername}"'",
 
 #### MESSAGE LIMIT CHECK & SEND ####
 
-# Call script to perform limit checks
-${limitCheckScrip} -m "${discordJson}"
+# Call script to perform limit checks (pass on debug argument if debug enabled)
+${limitCheckScrip} -m "${discordJson}" ${debug:+-d}
 
 # Send full, split or drop message based in limit check
 case ${?} in
 
     # Send full message
     0)
-        echo "Content within limits. Sending full webhook message."
+        # Output info if debug enabled
+        [ ${debug} ] && echo "Content within limits. Sending full webhook message."
 
         # Send full Json
         sendWebhook "${discordJson}" true
@@ -133,7 +155,8 @@ case ${?} in
 
     # Split message in multiple webhooks
     1)
-        echo "Content to large, but within manageable limits. Splitting webhook message"
+        # Output info if debug enabled
+        [ ${debug} ] && echo "Content to large, but within manageable limits. Splitting webhook message"
 
         # Remove embeds section
         discordJsonMinusEmbeds=$(jq "del(.embeds)" <<< "${discordJson}")
@@ -161,7 +184,7 @@ case ${?} in
 
     # Drop message and exit with error
     *)
-        echo "Error: Content outside manageable limits. Unable to send webhook." >&2
+        echo "Error: Limit check failed or content outside manageable limits. Unable to send webhook." >&2
         exit 1
         ;;
 
