@@ -19,7 +19,7 @@ usage() {
     echo "Options:"
     echo "  -c, --content <content>   Set the content of the Discord message."
     echo "  -e, --embeds <embeds>     Set the embeds of the Discord message."
-    echo "  -f, --file <file>         Set the file attachment path (optional)."
+    echo "  -f, --file <file-path>    Set the file attachment path (optional)."
     echo "  -h, --help                Show this help message and exit."
     echo ""
     echo "Refer to the Discord documentation for more information on Webhooks"
@@ -118,7 +118,7 @@ discordJson='{ "username":"'"${discordUsername}"'",
 #### MESSAGE LIMIT CHECK & SEND ####
 
 # Call script to perform limit checks
-${limitCheckScrip} "${discordJson}"
+${limitCheckScrip} -m "${discordJson}"
 
 # Send full, split or drop message based in limit check
 case ${?} in

@@ -1,13 +1,69 @@
 #!/bin/bash
 
+#### SCRIP USAGE FUNCTION ####
+
+# Usage function.
+usage() {
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -m, --message <json-content>  The Discord webhook message JSON to be checked."
+    echo "  -d, --debug                   Turns on console output"
+    echo "  -h, --help                    Show this help message and exit."
+    echo ""
+    echo "This script will check a Discord webhook message JSON string against content"
+    echo "limits set by Discord. The message data must be within the limits in order"
+    echo "to be successfully sent. The script will return an exit number based on the"
+    echo "results of the check."
+    echo ""
+    echo " 0) The message data is within the limimts."
+    echo " 1) The message data is outside limits, but can be sent in multiple messages."
+    echo " 2) The message data is outside limits and cannot be sent."
+    echo ""
+    echo "Refer to Discord Webook documentation for more details on the webhook limits:"
+    echo ""
+    echo "  https://birdie0.github.io/discord-webhooks-guide/other/field_limits.html"
+    echo ""
+}
+
 #### PARSE ARGUMENTS ####
 
-jsonContent=$1
+# Parsed from command line arguments.
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -m|--message)
+            jsonContent="$2"
+            shift 2
+            ;;
+        -d|--debug)
+            debug=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Invalid option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Check if JSON is provided and not empty
+if [ -z "$jsonContent" ]; then
+    echo "Error: The --message option is mandatory." >&2
+    usage
+    exit 1
+fi
 
 #### INITIALIZATION & PARAMETERS ####
 
 # Character lenght limits & object count limits (the order is important!)
 limits=(
+    'Username       .username                   80      char    1'
     'Content        .content                    2000    char    1'
     'Embeds         .embeds                     10      obj     0'
     'Author         .embeds[].author.name       256     char    1'
@@ -16,7 +72,7 @@ limits=(
     'Fields         .embeds[].fields            25      obj     1'
     'Name           .embeds[].fields[].name     256     char    1'
     'Value          .embeds[].fields[].value    1024    char    1'
-    'Footer         .footer.text                2048    char    1'
+    'Footer         .embeds[].footer.text       2048    char    1'
     'Totals         na                          6000    char    1'
     'Total          na                          6000    char    0'
 )
@@ -27,6 +83,7 @@ limitParameters="name section value type critical count"
 # Initialize result variables
 criticalResult=false
 outsideLimits=false
+results=""
 totalCharactersAllEmbeds=0
 
 #### LIMIT CHECK & RESULTS FUNCTION ####
@@ -34,7 +91,7 @@ totalCharactersAllEmbeds=0
 # Check count against limit and update results
 function updateResults() {
 
-    echo "${name}: ${count}"
+    [ ${debug} ] && echo "${name}: ${count}"
 
     # Compare count with limit value
     if [[ ${count} -gt ${value} ]]; then
@@ -154,7 +211,8 @@ done
 #### RETURN RESULTS ####
 
 # Output results
-echo -e "${results%??}"
+[ ${debug} ] && [ -n "${results}" ] && echo -e "${results%??}"
+
 
 # Exit with appropriate status
 if ${criticalResult}; then

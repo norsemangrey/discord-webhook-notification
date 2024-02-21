@@ -10,6 +10,7 @@ This script allows you to send notifications to a Discord channel using a webhoo
 - [Instructions](#instructions)
 - [Script Details](#script-details)
   - [Discord Variables](#discord-variables)
+  - [Limit Checks](#limit-checks)
   - [Discord Notification](#discord-notification)
 - [Example Usage](#example-usage)
 
@@ -63,7 +64,7 @@ To securely manage your Discord webhook token and other sensitive information, i
 
 These variables are imported from a separate `discord-variables.sh` script, which you should configure with your Discord user and channel details.
 
-### Limit Cecks
+### Limit Checks
 
 Discord has some limits reagarding the data that can be sent with the webhook (See [Discord Webhook field limits](https://birdie0.github.io/discord-webhooks-guide/other/field_limits.html)). The script will attempt to check the JSON data to be sent against these limits and based on the result split the message over several webhooks if possible. Otherwise the script will fail.
 
@@ -72,6 +73,8 @@ Discord has some limits reagarding the data that can be sent with the webhook (S
 The script assembles the Discord notification in JSON format, including the username, content, avatar URL, and embeds. It then sends the notification to the specified Discord channel using the webhook.
 
 You can choose to send plain text messages or messages with embedded content. Additionally, you can attach a file to the notification if needed.
+
+The last message sendt will be saved to a file for debug purposes.
 
 ## Example Usage
 
