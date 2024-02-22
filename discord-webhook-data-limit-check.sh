@@ -88,11 +88,16 @@ totalCharactersAllEmbeds=0
 
 #### LIMIT CHECK & RESULTS FUNCTION ####
 
-# Check count against limit and update results
+# Get count, check against limit and update results
 function updateResults() {
 
+    local indexedSection="$1"
+
+    # Get the object/character count if section is an object
+    [ "${indexedSection}" != "na" ] && count=$(jq "$indexedSection | length" <<< "${jsonMessage}")
+
     # Output info if debug enabled
-    [ ${debug} ] && echo "${name}: ${count}"
+    [ ${debug} ] && echo "${name}: ${count} / ${value}" >&2
 
     # Compare count with limit value
     if [[ ${count} -gt ${value} ]]; then
@@ -108,8 +113,8 @@ function updateResults() {
 
         fi
 
-        # Append to resutl if outside
-        results+="${name} ${section} ${value} ${type} ${critical} ${count}\n"
+        # Append to result if outside limit
+        results+="${name} ${indexedSection} ${value} ${type} ${critical} ${count}\n"
 
     fi
 
@@ -123,39 +128,41 @@ for limit in "${limits[@]}"; do
     # Read parameters from limit
     IFS=' ' read -r $limitParameters <<< "$limit"
 
-    # Check if limit is relates to the embeds section
-    if [[ "${section}" == *".embeds[]"* ]]; then
+    # Check if limit relates to the embeds section
+    if [[ "${section}" == *"embeds[]"* ]]; then
 
         # Check each embed section individually for applicable limits
-        for (( i=0; i<$embedsCount; i++ )); do
+        for (( i=0; i<$(jq ".embeds | length" <<< "${jsonMessage}"); i++ )); do
 
-            # Get current embed section content
-            embed=$(jq -r ".embeds[$i]" <<< "${jsonMessage}")
-
-            # Remove section name parent for correct parsing
-            element="${section//'.embeds[]'/}"
+            # Inject array index in embeds element for correct parsing
+            embedSection="${section/embeds[]/embeds[${i}]}"
 
             # Check if section is a field section as this is an array
-            if [[ "${section}" == *".fields[]"* ]]; then
+            if [[ "${section}" == *"fields[]"* ]]; then
 
-                # Remove section name parent for correct parsing
-                element="${element//'.fields[]'/}"
+                # Check each field section individually for applicable limits
+                for (( j=0; j<$(jq ".embeds[$i].fields | length" <<< "${jsonMessage}"); j++ )); do
 
-                # Get the character count sum for each child element of the field section
-                count=$(jq ".fields | map($element | length) | add" <<< "${embed}")
+                    # Inject array index in fields element for correct parsing
+                    fieldSection="${embedSection/fields[]/fields[${j}]}"
+
+                    # Check limits and update results
+                    updateResults "${fieldSection}"
+
+                    # Add to total characters if character type
+                    [ "${type}" == "char" ] && ((embedTotals[$i]+=count))
+
+                done
 
             else
 
-                # Get the count (characters or array length)
-                count=$(jq "$element | length" <<< "${embed}")
+                # Check limits and update results
+                updateResults "${embedSection}"
+
+                # Add to total characters if character type
+                [ "${type}" == "char" ] && ((embedTotals[$i]+=count))
 
             fi
-
-            # Add to total characters if character type
-            [ "${type}" == "char" ] && ((embedTotals[$i]+=count))
-
-            # Check limits and update resutls
-            updateResults
 
         done
 
@@ -165,44 +172,25 @@ for limit in "${limits[@]}"; do
         for count in "${embedTotals[@]}"; do
 
             # Check agains limit and update result
-            updateResults
+            updateResults "${section}" ${count}
 
             # Add to the overall total character count
             ((totalCharactersAllEmbeds+=count))
 
         done
 
-    #
     elif [[ "${name}" == "Total" ]]; then
 
         # Get the total character count for all embeds
         count=${totalCharactersAllEmbeds}
 
         # Check agains limit and update result
-        updateResults
+        updateResults "${section}" ${count}
 
     else
 
-        # Get the count (characters or array length)
-        count=$(jq "$section | length" <<< "${jsonMessage}")
-
-        # Check if the limit is for the embeds section
-        if [[ "${name}" == "Embeds" ]]; then
-
-            # Set the number of embeds (used in other limit check)
-            embedsCount=${count}
-
-            # Initialize an array for the character count in each embed
-            for (( i=0; i<$embedsCount; i++ )); do
-
-                embedTotals[$i]=0
-
-            done
-
-        fi
-
         # Check agains limit and update result
-        updateResults
+        updateResults "${section}"
 
     fi
 
@@ -212,8 +200,7 @@ done
 #### RETURN RESULTS ####
 
 # Output results
-[ ${debug} ] && [ -n "${results}" ] && echo -e "${results%??}"
-
+[ ${debug} ] && [ -n "${results}" ] && echo -e "${results%??}" >&2
 
 # Exit with appropriate status
 if ${criticalResult}; then

@@ -60,7 +60,7 @@ sendWebhook() {
     fi
 
     # Output curl reposnse if debug enabled
-    [ ${debug} ] && echo "${response}"
+    [ ${debug} ] && echo "${response}" >&2
 
 }
 
@@ -147,22 +147,22 @@ case ${?} in
     # Send full message
     0)
         # Output info if debug enabled
-        [ ${debug} ] && echo "Content within limits. Sending full webhook message."
+        [ ${debug} ] && echo "Content within limits. Sending full webhook message." >&2
 
         # Send full Json
-        sendWebhook "${discordJson}" true
+        #sendWebhook "${discordJson}" true
         ;;
 
     # Split message in multiple webhooks
     1)
         # Output info if debug enabled
-        [ ${debug} ] && echo "Content to large, but within manageable limits. Splitting webhook message"
+        [ ${debug} ] && echo "Content to large, but within manageable limits. Splitting webhook message" >&2
 
         # Remove embeds section
         discordJsonMinusEmbeds=$(jq "del(.embeds)" <<< "${discordJson}")
 
         # Send message without embeds
-        sendWebhook "${discordJsonMinusEmbeds}" true
+        #sendWebhook "${discordJsonMinusEmbeds}" true
 
         # Get number of embeds in original message
         embedsCount=$(jq ".embeds | length" <<< "${discordJson}")
@@ -177,7 +177,7 @@ case ${?} in
             discordJsonSingleEmbed=$(jq ".embeds=[$embed] | del(.content)" <<< "${discordJson}")
 
             # Send message with single embed and without the rest of the data
-            sendWebhook "${discordJsonSingleEmbed}" false
+            #sendWebhook "${discordJsonSingleEmbed}" false
 
         done
         ;;
